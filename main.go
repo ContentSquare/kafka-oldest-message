@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"strings"
-        "time"
+	"time"
 )
 
 func main() {
 
 	config := sarama.NewConfig()
-        config.Version = sarama.V2_1_0_0
-	config.Consumer.Offsets.CommitInterval = 60
+	config.Version = sarama.V2_1_0_0
 	config.Consumer.Return.Errors = true
 
 	brokers := []string{"localhost:9092"}
@@ -29,18 +28,18 @@ func main() {
 		}
 
 		partitions, _ := client.Partitions(topic)
+
 		consumer, err := client.ConsumePartition(topic, partitions[0], sarama.OffsetOldest)
 		if nil != err {
-			panic(err)
+			continue
 		}
-
 		select {
-		case consumerError := <-consumer.Errors():
-			fmt.Println("consumerError: ", consumerError.Err)
+		case _ = <-consumer.Errors():
+			continue
+		case <-time.After(500 * time.Millisecond):
+			continue
 		case msg := <-consumer.Messages():
-			fmt.Printf("oldest message in topic %s at %v\n", topic, msg.Timestamp)
-                case <-time.After(500 * time.Millisecond):
-			fmt.Printf("no message in topic %s\n", topic)
+			fmt.Printf("kafka_oldest_message_age{topic=\"%s\"} %v\n", topic, msg.Timestamp.UnixNano())
 		}
 	}
 
